@@ -53,6 +53,16 @@ class Rule(object):
 
 #--- Rules for Add nodes ---
 
+def single_add_op(matched):
+    if len(matched.args) == 1:
+        return matched.args[0]
+    elif len(matched.args) == 0:
+        return Const(0)
+    else:
+        return False
+        
+single_add = Rule(Add, single_add_op)
+
 def addition_identity_op(matched):
     new_args = []
     for arg in matched.args:
@@ -119,6 +129,16 @@ def add_to_mult_op(matched):
 add_to_mult = Rule(Add, add_to_mult_op)
 
 #--- Rules for Multiply nodes ---
+
+def single_mult_op(matched):
+    if len(matched.args) == 0:
+        return Const(1)
+    elif len(matched.args) == 1:
+        return matched.args[0]
+    else:
+        return False
+        
+single_mult = Rule(Multiply, single_mult_op)
 
 def mult_zero_op(matched):
     for arg in matched.args:
@@ -276,6 +296,8 @@ uncombine_power_base = Rule(Power, uncombine_power_base_op)
 import cas.factor as factor
 
 simplify_rules = [
+    single_add,
+    single_mult,
     addition_identity, 
     mult_identity, 
     mult_zero, 
