@@ -5,11 +5,21 @@ from copy import copy
 
 class IndeterminateFormException(Exception):
     def __init__(self, form):
-        self.form=form      
+        self.form = form      
     def __str__(self):
         return "An indeterminate form was encoutered: %s." % (str(self.form))
     def __repr__(self):
         return str(self)
+
+
+class UndefinedException(Exception):
+    def __init__(self, exp):
+        self.exp = exp
+    def __str__(self):
+        return "An undefined expression was encoutered: %s." % (str(self.exp))
+    def __repr__(self):
+        return str(self)
+
 
 class Rule(object):
     def __init__(self, match_class, apply_function):
@@ -37,7 +47,7 @@ class Rule(object):
             if not self.is_a(node, some_class):
                 return False
         return True    
-        
+    
     @classmethod
     def all_equal(self, nodes):
         return len(set(nodes)) == 1
@@ -92,8 +102,10 @@ def join_const_add_op(matched):
         new_args.append(const_val)
     if len(new_args) > 1:
         return Add(*new_args)
+    elif len(new_args) == 1:
+        return new_args[0]
     else:
-        return const_val
+        return Const(0)
     
 join_add_consts = Rule(Add, join_const_add_op)
 
@@ -270,6 +282,8 @@ def join_const_pow_op(matched):
     if Rule.all_are(matched.args, Const):
         if Rule.is_const_equal(matched.exponent(), 0) and Rule.is_const_equal(matched.base(), 0):
             raise IndeterminateFormException(matched)
+        elif Rule.is_const_equal(matched.base(), 0) and matched.exponent().value() / abs(matched.exponent().value()) == -1:
+            raise UndefinedException(matched)
         else:
             return matched.apply({})
     else:
@@ -293,9 +307,7 @@ def uncombine_power_base_op(matched):
 
 uncombine_power_base = Rule(Power, uncombine_power_base_op)
 
-import cas.factor as factor
-
-simplify_rules = [
+simplify_rules_only = [
     single_add,
     single_mult,
     addition_identity, 
@@ -314,5 +326,16 @@ simplify_rules = [
     uncombine_power_base,
     collapse_power_tree,
     merge_power_terms,
-    factor.factor
 ]
+
+import cas.factor as factor
+import cas.distribute as distribute
+
+simplify_rules = simplify_rules_only + [
+    factor.factor,
+    distribute.simp_by_expand_mult,
+    distribute.simp_by_expand_add,
+    distribute.simp_by_expand_pow
+]
+
+expand_rules = simplify_rules_only + [distribute.distribute]

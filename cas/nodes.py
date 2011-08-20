@@ -22,6 +22,12 @@ class Node(object):
             hash_val = hash_val | arg.__hash__()
         return hash_val
         
+    def complexity_count(self):
+        count = 1 #that's the current node
+        for arg in self.args:
+            count += arg.complexity_count()
+        return count
+        
     def pretty_print(self):
         return str(self)
         
@@ -34,6 +40,7 @@ class Node(object):
         new_self = self
         for rule in rules:
             new_self = new_self.apply_rule(rule)
+#            print "inter: " + rule.apply_function.__name__ + " : " + new_self.pretty_print()
         print "new: " + new_self.pretty_print()
         if new_self != self:
             return new_self.apply_rules_until_fixed(rules)
@@ -46,10 +53,18 @@ class Node(object):
     def simplify(self):
         print "simplifying: " + self.pretty_print()
         return self.apply_rules_until_fixed(cas.rules.simplify_rules)
-
+        
+    def expand(self):
+        print "expanding: " + self.pretty_print()
+        return self.apply_rules_until_fixed(cas.rules.expand_rules)
 
 class Atom(Node):
-    pass
+    def complexity_count(self):
+        return 1
+    
+    def apply_rule(self, rule):
+        return self
+
 
 class Const(Atom):
     def __init__(self, value):
@@ -58,15 +73,15 @@ class Const(Atom):
     def __eq__(self, other):
         return self.__class__ == other.__class__ and self.args[0] == other.args[0]
 
+    def complexity_count(self):
+        return self.value()
+
     def pretty_print(self):
         return str(self.value())
 
     def value(self):
         return self.args[0]
-        
-    def apply_rule(self, rule):
-        return self
-        
+    
     def apply(self, vals):
         return self
         
@@ -74,19 +89,16 @@ class Const(Atom):
 class Var(Atom):
     def __init__(self, name):
         super(Var, self).__init__(name)
-
+    
     def __eq__(self, other):
         return self.__class__ == other.__class__ and self.args[0] == other.args[0]
-
+    
     def pretty_print(self):
         return str(self.name())
-
+    
     def name(self):
         return self.args[0]
-
-    def apply_rule(self, rule):
-        return self
-        
+    
     def apply(self, vals):
         if self in vals:
             return Const(vals[self])
@@ -94,8 +106,8 @@ class Var(Atom):
             return Const(vals[self.name()])
         else:
             return None
-        
-        
+    
+    
 class Add(Node):
     def __init__(self, *args):
         super(Add, self).__init__(*args)
